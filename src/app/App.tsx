@@ -9,6 +9,10 @@ import {
   Text,
 } from 'react-native';
 
+import {
+  Colors,
+} from 'react-native/Libraries/NewAppScreen';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import QRCodeScanner from 'react-native-qrcode-scanner';
@@ -69,33 +73,100 @@ const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
 };
 
 const UIWithoutUnlockKey = () => {
-  const onQRCodeRead = (code) => {
-    console.log({ code });
-  }
+  const [isScanning, setIsScanning] = useState(false);
 
-  const markup = (
+  const handleQRCodeRead = (code) => {
+    console.log({ code });
+  };
+
+  const handleStartScanning = () => {
+    setIsScanning(true);
+  };
+
+  const handleAbortScanning = () => {
+    setIsScanning(false);
+  };
+
+  const isScanningMarkup = (
     <View
       style={{
-        flex: 1,
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        padding: defaultPadding,
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        backgroundColor: Colors.white,
       }}
     >
       <Text
         style={{
           fontSize: defaultFontSize,
+          padding: defaultPadding,
+        }}
+      >
+        Now please scan the QR code on your computer.
+      </Text>
+      <QRCodeScanner
+        onRead={handleQRCodeRead}
+        topContent={<Text>Please scan the QR code on the computer.</Text>}
+        cameraStyle={{
+          height: '100%',
+          width: '100%',
+        }}
+        containerStyle={{
+          width: '100%',
+          height: '100%',
+        }}
+      />
+      <View
+        style={{
+          padding: defaultPadding,
+        }}
+      >
+        <Button
+          title="Cancel, I give up."
+          onPress={handleAbortScanning}
+        />
+      </View>
+    </View>
+  );
+
+  const isNotScanningMarkup = (
+    <View
+      style={{
+        flex: 1,
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: defaultPadding,
+        backgroundColor: Colors.white,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: defaultFontSize,
+          marginBottom: defaultPadding * 2,
         }}
       >
         It seems you need to pair the app with a computer running Ubuntu.
       </Text>
-      <QRCodeScanner
-        onRead={onQRCodeRead}
-        topContent={<Text>Please scan the QR code on the computer.</Text>}
-      />
+
+      <Text
+        style={{
+          fontSize: defaultFontSize,
+          marginBottom: defaultPadding * 2,
+        }}
+      >
+        You can pair it by scanning the QR code on the server.
+      </Text>
+
+      <Button onPress={handleStartScanning} title="Start Scanning">
+        Start Scanning for the QR code
+      </Button>
     </View>
   );
+
+  const markup = isScanning
+    ? isScanningMarkup
+    : isNotScanningMarkup;
 
   return markup;
 };
