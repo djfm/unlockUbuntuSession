@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 
 const os = require('os');
-const https = require('https');
 const childProcess = require('child_process');
 
 const path = require('path');
 
 const QRCode = require('qrcode');
 
+// eslint-disable-next-line import/no-unresolved
 const express = require('express');
+// eslint-disable-next-line import/no-unresolved
 const bodyParser = require('body-parser');
 
 const {
@@ -17,20 +18,8 @@ const {
   stat,
 } = require('fs/promises');
 
-const port = process.env.PORT || 7583;
-
-const serverKeyPath = path.join(
-  __dirname, 'server-key.pem',
-);
-
-const serverCertPath = path.join(
-  __dirname, 'server-cert.perm',
-);
-
-const readFileToString = async (path) => {
-  const buffer = await readFile(path);
-  return buffer.toString();
-};
+const port = 7583;
+const secretPath = path.join(__dirname, 'secret.txt');
 
 const exec = (command) => new Promise((resolve, reject) => {
   childProcess.exec(command, (error, stdout, stderr) => {
@@ -42,77 +31,14 @@ const exec = (command) => new Promise((resolve, reject) => {
   });
 });
 
-const ips = [];
-for (const nets of Object.values(os.networkInterfaces())) {
-  for (const net of nets) {
-    if (net.family === 'IPv4' && !net.internal) {
-      ips.push(net.address);
-    }
-  }
-}
-
-const secretPath = path.join(
-  __dirname,
-  'secret.txt',
-);
-
 const app = express();
 app.use(bodyParser.json());
-app.use((req, res, next) => {
-  if (req.hostname === 'localhost') {
-    return res.redirect(`${
-      req.protocol
-    }://${
-      ips[0]
-    }:${
-      port
-    }${
-      req.path
-    }`);
-  }
-
-  return next();
-});
-
-const main = async () => {
-  try {
-    await stat(secretPath);
-    return;
-  } catch (e) {
-    if (e.code !== 'ENOENT') {
-      throw e;
-    }
-
-    const makeRandom = (n) => {
-      if (n <= 0) {
-        return '';
-      }
-
-      return `${Math.random() * 1000000}${makeRandom(n - 1)}`;
-    };
-
-    const bigRandomThing = makeRandom(10);
-
-    await writeFile(secretPath, bigRandomThing);
-
-    const key = await readFileToString(serverKeyPath);
-    const cert = await readFileToString(serverCertPath);
-
-    https.createServer({
-      key,
-      cert,
-    }, app).listen(port, () => {
-      // eslint-disable-next-line no-console
-      console.log(`Locker / Unlocker listening on port ${port}`);
-    });
-  }
-};
 
 app.get('/', async (req, res) => {
   const secret = await readFile(secretPath);
   const QRData = JSON.stringify({
     secret: secret.toString('utf-8'),
-    serverURL: `${req.protocol}://${req.hostname}:${port}`,
+    serverURL: `https://${req.headers['x-forwarded-host']}`,
     hostname: os.hostname(),
   });
 
@@ -134,14 +60,14 @@ app.get('/', async (req, res) => {
 
 app.post('/unlock', async (req, res) => {
   const secret = await readFile(secretPath);
-  if (secret === req.body.secret) {
+  if (secret.toString() === req.body.secret) {
     try {
       const out = await exec([
         'dbus-send --session --dest=org.gnome.ScreenSaver',
         '--type=method_call --print-reply --reply-timeout=20000',
         '/org/gnome/ScreenSaver org.gnome.ScreenSaver.SetActive boolean:false',
       ].join(' '));
-      res.send(out);
+      res.json({ ok: out.stderr === '' });
     } catch (e) {
       res.status(500).send(e.message);
     }
@@ -152,14 +78,14 @@ app.post('/unlock', async (req, res) => {
 
 app.post('/lock', async (req, res) => {
   const secret = await readFile(secretPath);
-  if (secret === req.body.secret) {
+  if (secret.toString() === req.body.secret) {
     try {
       const out = await exec([
         'dbus-send --session --dest=org.gnome.ScreenSaver',
         '--type=method_call --print-reply --reply-timeout=20000',
         '/org/gnome/ScreenSaver org.gnome.ScreenSaver.Lock',
       ].join(' '));
-      res.send(out);
+      res.json({ ok: out.stderr === '' });
     } catch (e) {
       res.status(500).send(e.message);
     }
@@ -167,5 +93,32 @@ app.post('/lock', async (req, res) => {
     res.status(403).send('bad secret');
   }
 });
+
+const main = async () => {
+  try {
+    await stat(secretPath);
+  } catch (e) {
+    if (e.code !== 'ENOENT') {
+      throw e;
+    }
+
+    const makeRandom = (n) => {
+      if (n <= 0) {
+        return '';
+      }
+
+      return `${Math.random() * 1000000}${makeRandom(n - 1)}`;
+    };
+
+    const bigRandomThing = makeRandom(10);
+
+    await writeFile(secretPath, bigRandomThing);
+  }
+
+  app.listen(port, () => {
+    // eslint-disable-next-line no-console
+    console.log(`Locker / Unlocker listening on port ${port}`);
+  });
+};
 
 main();

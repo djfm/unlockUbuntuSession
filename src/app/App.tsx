@@ -3,8 +3,6 @@ import React, {
   useState,
 } from 'react';
 
-import { Buffer } from 'buffer';
-
 import {
   Button,
   View,
@@ -21,6 +19,7 @@ import { BarCodeReadEvent } from 'react-native-camera';
 import QRCodeScanner from 'react-native-qrcode-scanner';
 
 type UnlockKey = {
+  hostname: string
   serverURL: string
   secret: string
 }
@@ -40,13 +39,53 @@ type UIWithUnlockKeyProps = {
   unlockKey: UnlockKey
 }
 const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
-  const handleUnlockPressed = () => {
+  const [isLocked, setIsLocked] = useState<boolean | undefined>(undefined);
 
+  const handleUnlockPressed = async () => {
+    try {
+      const resp = await fetch(`${unlockKey.serverURL}/unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: unlockKey.secret,
+        }),
+      });
+      if (resp.ok) {
+        const status = await resp.json();
+        if (!status.ok) {
+          throw new Error('Seems like the operation failed.');
+        }
+        setIsLocked(false);
+      } else {
+        throw new Error(`Invalid response with status: ${resp.status}.`);
+      }
+    } catch (e) {
+      console.log(e);
+    }
   };
 
-  const handleLockPressed = () => {
-
-  }
+  const handleLockPressed = async () => {
+    try {
+      const resp = await fetch(`${unlockKey.serverURL}/lock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: unlockKey.secret,
+        }),
+      });
+      if (resp.ok) {
+        const status = await resp.json();
+        if (!status.ok) {
+          throw new Error('Seems like the operation failed.');
+        }
+        setIsLocked(true);
+      } else {
+        throw new Error(`Invalid response with status: ${resp.status}.`);
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
 
   const markup = (
     <View
@@ -67,26 +106,39 @@ const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
         Unlock Ubuntu Sessions seems to be Properly Configured.
       </Text>
 
+      <Text>
+        Paired with
+        &quot;
+        {unlockKey.hostname}
+        &quot; at &quot;
+        {unlockKey.serverURL}
+        &quot;.
+      </Text>
+
       <View
         style={{
           marginTop: 2 * defaultPadding,
           marginBottom: 2 * defaultPadding,
         }}
       >
-        <Button
-          title="Unlock Screen"
-          onPress={handleUnlockPressed}
-        >
-          Unlock Screen
-        </Button>
+        {(isLocked === true || isLocked === undefined) && (
+          <Button
+            title="Unlock Session"
+            onPress={handleUnlockPressed}
+          >
+            Unlock Session
+          </Button>
+        )}
       </View>
 
-      <Button
-        title="Lock Screen"
-        onPress={handleLockPressed}
-      >
-        Lock Screen
-      </Button>
+      {(isLocked === false || isLocked === undefined) && (
+        <Button
+          title="Lock Session"
+          onPress={handleLockPressed}
+        >
+          Lock Session
+        </Button>
+      )}
     </View>
   );
 
