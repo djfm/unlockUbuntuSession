@@ -30,7 +30,7 @@ const exec = (command) => new Promise((resolve, reject) => {
   });
 });
 
-const loadSecrets = async () => {
+const loadSecretsDB = async () => {
   try {
     const buffer = await readFile(secretsPath);
     const str = buffer.toString();
@@ -70,7 +70,7 @@ const isValidSecret = (secret) => {
 };
 
 const validateSecret = async (secret) => {
-  const secrets = await loadSecrets();
+  const secrets = await loadSecretsDB();
   return isValidSecret([secrets[secret]]);
 };
 
@@ -112,7 +112,7 @@ app.get('/', async (req, res) => {
       hostname: os.hostname(),
     });
 
-    const secrets = await loadSecrets();
+    const secrets = await loadSecretsDB();
     secrets[secret] = true;
     await writeSecrets(secrets);
 
