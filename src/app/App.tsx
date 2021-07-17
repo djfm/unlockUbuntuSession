@@ -42,12 +42,31 @@ const getUnlockKey = async (): Promise<UnlockKey | undefined> => {
   return undefined;
 };
 
+const forgetUnlockKey = async (): Promise<void> =>
+  AsyncStorage.removeItem('unlockKey');
+
 type UIWithUnlockKeyProps = {
   unlockKey: UnlockKey
+  unPair: () => void
 }
-const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
+const UIWithUnlockKey = ({
+  unlockKey,
+  unPair,
+}: UIWithUnlockKeyProps) => {
   const [isLocked, setIsLocked] = useState<boolean | undefined>(undefined);
   const [isWaiting, setIsWaiting] = useState(false);
+
+  const handleUnPairPressed = async () => {
+    setIsWaiting(true);
+    try {
+      await forgetUnlockKey();
+      setIsWaiting(false);
+      unPair();
+    } catch (e) {
+      console.log(e);
+      setIsWaiting(false);
+    }
+  };
 
   const handleUnlockPressed = async () => {
     setIsWaiting(true);
@@ -136,15 +155,36 @@ const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
           Unlock Ubuntu Sessions seems to be Properly Configured.
         </Text>
 
-        <Text>
-          Paired with
-          &quot;
-          {unlockKey.hostname}
-          &quot; at &quot;
-          {unlockKey.serverURL}
-          &quot;.
-        </Text>
-
+        <View
+          style={{
+            flex: 0,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-evenly',
+          }}
+        >
+          <Text
+            style={{
+              fontSize: defaultFontSize,
+              padding: defaultPadding,
+            }}
+          >
+            paired with
+            &quot;
+            {unlockKey.hostname}
+            &quot;
+            {'\n'}
+            @&nbsp;
+            {unlockKey.serverURL}
+          </Text>
+          <Button
+            title="Un-pair"
+            onPress={handleUnPairPressed}
+            disabled={isWaiting}
+          >
+            Un-pair
+          </Button>
+        </View>
         <View>
           <View
             style={{
@@ -304,7 +344,12 @@ const App: React.FC = () => {
 
   const markup = unlockKey === undefined
     ? <UIWithoutUnlockKey setQRCode={setQRCode} />
-    : <UIWithUnlockKey unlockKey={unlockKey} />;
+    : (
+      <UIWithUnlockKey
+        unlockKey={unlockKey}
+        unPair={() => setUnlockKey(undefined)}
+      />
+    );
 
   return markup;
 };
