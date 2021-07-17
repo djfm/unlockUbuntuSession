@@ -21,8 +21,8 @@ type UnlockKey = {
   secret: string
 }
 
-const defaultPadding = 10;
-const defaultFontSize = 20;
+const baseSpacing = 10;
+const baseFontSize = 20;
 
 const Colors = {
   primary: '#1292B4',
@@ -147,8 +147,8 @@ const UIWithUnlockKey = ({
       >
         <Text
           style={{
-            fontSize: defaultFontSize,
-            padding: 2 * defaultPadding,
+            fontSize: baseFontSize,
+            padding: 2 * baseSpacing,
             textAlign: 'center',
           }}
         >
@@ -165,8 +165,8 @@ const UIWithUnlockKey = ({
         >
           <Text
             style={{
-              fontSize: defaultFontSize,
-              padding: defaultPadding,
+              fontSize: baseFontSize,
+              padding: baseSpacing,
             }}
           >
             paired with
@@ -188,8 +188,8 @@ const UIWithUnlockKey = ({
         <View>
           <View
             style={{
-              marginTop: 2 * defaultPadding,
-              marginBottom: 2 * defaultPadding,
+              marginTop: 2 * baseSpacing,
+              marginBottom: 2 * baseSpacing,
             }}
           >
             {(isLocked === true || isLocked === undefined) && (
@@ -252,8 +252,8 @@ const UIWithoutUnlockKey = (
     >
       <Text
         style={{
-          fontSize: defaultFontSize,
-          padding: defaultPadding,
+          fontSize: baseFontSize,
+          padding: baseSpacing,
         }}
       >
         Now please scan the QR code on your computer.
@@ -272,7 +272,7 @@ const UIWithoutUnlockKey = (
       />
       <View
         style={{
-          padding: defaultPadding,
+          padding: baseSpacing,
         }}
       >
         <Button
@@ -290,14 +290,14 @@ const UIWithoutUnlockKey = (
         flexDirection: 'column',
         justifyContent: 'space-evenly',
         alignItems: 'center',
-        padding: defaultPadding,
+        padding: baseSpacing,
         backgroundColor: Colors.white,
       }}
     >
       <Text
         style={{
-          fontSize: defaultFontSize,
-          marginBottom: defaultPadding * 2,
+          fontSize: baseFontSize,
+          marginBottom: baseSpacing * 2,
         }}
       >
         It seems you need to pair the app with a computer running Ubuntu.
@@ -305,8 +305,8 @@ const UIWithoutUnlockKey = (
 
       <Text
         style={{
-          fontSize: defaultFontSize,
-          marginBottom: defaultPadding * 2,
+          fontSize: baseFontSize,
+          marginBottom: baseSpacing * 2,
         }}
       >
         You can pair it by scanning the QR code on the server.
