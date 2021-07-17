@@ -173,6 +173,18 @@ app.get('/', async (req, res) => {
   `);
 });
 
+app.get('/status', async (req, res) => {
+  const out = await exec([
+    'dbus-send --session --dest=org.gnome.ScreenSaver',
+    '--type=method_call --print-reply --reply-timeout=20000',
+    '/org/gnome/ScreenSaver org.gnome.ScreenSaver.GetActive',
+  ].join(' '));
+  const [, reply] = out.stdout.split('\n');
+  res.json({
+    locked: !(reply.trim() === 'boolean false'),
+  });
+});
+
 app.post('/unlock', async (req, res) => {
   const allowed = await validateSecret(req.body.secret);
   if (allowed) {

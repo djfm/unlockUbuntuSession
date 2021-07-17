@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -33,6 +36,23 @@ export const ViewWithUnlockKey: React.FC<ViewWithUnlockKeyProps> = ({
 }) => {
   const [isLocked, setIsLocked] = useState<boolean | undefined>(undefined);
   const [isWaiting, setIsWaiting] = useState(false);
+
+  useEffect(() => {
+    let applyEffect = true;
+    (async () => {
+      const resp = await fetch(`${unlockKey.serverURL}/status`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (applyEffect) {
+          setIsLocked(data.locked);
+        }
+      }
+    })();
+
+    return () => {
+      applyEffect = false;
+    };
+  });
 
   const handleUnPairPressed = async () => {
     setIsWaiting(true);
