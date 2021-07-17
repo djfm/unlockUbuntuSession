@@ -43,6 +43,11 @@
           "jsx": "never",
           "js": "always"
       }],
+      "import/no-unresolved": [2, {
+        "ignore": [
+          "react-native"
+        ]
+      }],
       "no-restricted-syntax": 0,
       "implicit-arrow-linebreak": 0
   }
