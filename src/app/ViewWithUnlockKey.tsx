@@ -157,7 +157,7 @@ export const ViewWithUnlockKey: React.FC<ViewWithUnlockKeyProps> = ({
           <Button
             title="Un-pair"
             onPress={handleUnPairPressed}
-            disabled={isWaiting}
+            disabled={isWaiting || isLocked === true}
           >
             Un-pair
           </Button>
