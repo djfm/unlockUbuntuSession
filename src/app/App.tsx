@@ -33,6 +33,11 @@ const App: React.FC = () => {
 
   const setQRCode = async (code: string) => {
     const key = JSON.parse(code);
+    await AsyncStorage.setItem(
+      'unlockKey',
+      JSON.stringify(key),
+    );
+    console.log('stored unlockKey');
     setUnlockKey(key);
   };
 
@@ -49,7 +54,7 @@ const App: React.FC = () => {
     return () => {
       applyEffect = false;
     };
-  });
+  }, [unlockKey]);
 
   const body = unlockKey === undefined
     ? <ViewWithoutUnlockKey setQRCode={setQRCode} />
