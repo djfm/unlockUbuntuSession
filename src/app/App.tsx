@@ -4,14 +4,11 @@ import React, {
 } from 'react';
 
 import {
+  ActivityIndicator,
   Button,
   View,
   Text,
 } from 'react-native';
-
-import {
-  Colors,
-} from 'react-native/Libraries/NewAppScreen';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -27,6 +24,16 @@ type UnlockKey = {
 const defaultPadding = 10;
 const defaultFontSize = 20;
 
+const Colors = {
+  primary: '#1292B4',
+  white: '#FFF',
+  lighter: '#F3F3F3',
+  light: '#DAE1E7',
+  dark: '#444',
+  darker: '#222',
+  black: '#000',
+};
+
 const getUnlockKey = async (): Promise<UnlockKey | undefined> => {
   const jsonKey = await AsyncStorage.getItem('unlockKey');
   if (jsonKey) {
@@ -40,8 +47,10 @@ type UIWithUnlockKeyProps = {
 }
 const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
   const [isLocked, setIsLocked] = useState<boolean | undefined>(undefined);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   const handleUnlockPressed = async () => {
+    setIsWaiting(true);
     try {
       const resp = await fetch(`${unlockKey.serverURL}/unlock`, {
         method: 'POST',
@@ -50,6 +59,7 @@ const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
           secret: unlockKey.secret,
         }),
       });
+
       if (resp.ok) {
         const status = await resp.json();
         if (!status.ok) {
@@ -61,10 +71,13 @@ const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
       }
     } catch (e) {
       console.log(e);
+    } finally {
+      setIsWaiting(false);
     }
   };
 
   const handleLockPressed = async () => {
+    setIsWaiting(true);
     try {
       const resp = await fetch(`${unlockKey.serverURL}/lock`, {
         method: 'POST',
@@ -73,6 +86,9 @@ const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
           secret: unlockKey.secret,
         }),
       });
+
+      setIsWaiting(false);
+
       if (resp.ok) {
         const status = await resp.json();
         if (!status.ok) {
@@ -84,6 +100,8 @@ const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
       }
     } catch (e) {
       console.log(e);
+    } finally {
+      setIsWaiting(false);
     }
   };
 
@@ -91,54 +109,71 @@ const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
     <View
       style={{
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: Colors.white,
       }}
     >
-      <Text
-        style={{
-          fontSize: defaultFontSize,
-          padding: 2 * defaultPadding,
-          textAlign: 'center',
-        }}
-      >
-        Unlock Ubuntu Sessions seems to be Properly Configured.
-      </Text>
+      {isWaiting && (
+        <ActivityIndicator
+          size="large"
+          color={Colors.primary}
 
-      <Text>
-        Paired with
-        &quot;
-        {unlockKey.hostname}
-        &quot; at &quot;
-        {unlockKey.serverURL}
-        &quot;.
-      </Text>
-
+        />
+      )}
       <View
         style={{
-          marginTop: 2 * defaultPadding,
-          marginBottom: 2 * defaultPadding,
+          flex: 1,
+          justifyContent: 'space-evenly',
+          alignItems: 'center',
+          backgroundColor: Colors.white,
         }}
       >
-        {(isLocked === true || isLocked === undefined) && (
-          <Button
-            title="Unlock Session"
-            onPress={handleUnlockPressed}
-          >
-            Unlock Session
-          </Button>
-        )}
-      </View>
-
-      {(isLocked === false || isLocked === undefined) && (
-        <Button
-          title="Lock Session"
-          onPress={handleLockPressed}
+        <Text
+          style={{
+            fontSize: defaultFontSize,
+            padding: 2 * defaultPadding,
+            textAlign: 'center',
+          }}
         >
-          Lock Session
-        </Button>
-      )}
+          Unlock Ubuntu Sessions seems to be Properly Configured.
+        </Text>
+
+        <Text>
+          Paired with
+          &quot;
+          {unlockKey.hostname}
+          &quot; at &quot;
+          {unlockKey.serverURL}
+          &quot;.
+        </Text>
+
+        <View>
+          <View
+            style={{
+              marginTop: 2 * defaultPadding,
+              marginBottom: 2 * defaultPadding,
+            }}
+          >
+            {(isLocked === true || isLocked === undefined) && (
+              <Button
+                title="Unlock Session"
+                onPress={handleUnlockPressed}
+                disabled={isWaiting}
+              >
+                Unlock Session
+              </Button>
+            )}
+          </View>
+
+          {(isLocked === false || isLocked === undefined) && (
+            <Button
+              title="Lock Session"
+              onPress={handleLockPressed}
+              disabled={isWaiting}
+            >
+              Lock Session
+            </Button>
+          )}
+        </View>
+      </View>
     </View>
   );
 
@@ -213,7 +248,7 @@ const UIWithoutUnlockKey = (
       style={{
         flex: 1,
         flexDirection: 'column',
-        justifyContent: 'center',
+        justifyContent: 'space-evenly',
         alignItems: 'center',
         padding: defaultPadding,
         backgroundColor: Colors.white,
