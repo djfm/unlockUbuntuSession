@@ -37,7 +37,6 @@ const App: React.FC = () => {
       'unlockKey',
       JSON.stringify(key),
     );
-    console.log('stored unlockKey');
     setUnlockKey(key);
   };
 
