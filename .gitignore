@@ -67,4 +67,4 @@ buck-out/
 !.yarn/sdks
 !.yarn/versions
 
-src/server/secret.txt
+src/server/secrets.json

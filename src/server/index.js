@@ -100,19 +100,30 @@ app.get('/', async (req, res) => {
     ? req.headers['x-forwarded-host']
     : req.hostname;
 
-  const secret = makeRandomString();
+  // seems weird to define a route inside a route,
+  // but it works well, the '/img' handler
+  // just gets overridden with every request to '/'
+  app.get('/img', async (imgReq, imgRes) => {
+    imgRes.set('Access-Control-Allow-Origin', '*');
+    const secret = makeRandomString();
 
-  const QRData = JSON.stringify({
-    secret,
-    serverURL: `${protocol}://${hostname}`,
-    hostname: os.hostname(),
+    const QRData = JSON.stringify({
+      secret,
+      serverURL: `${protocol}://${hostname}`,
+      hostname: os.hostname(),
+    });
+
+    const secrets = await loadSecrets();
+    secrets[secret] = true;
+    await writeSecrets(secrets);
+
+    const imgSrc = await QRCode.toDataURL(QRData);
+
+    imgRes.send(
+      `<img alt="scan this to pair the app" src="${imgSrc}" />`,
+    );
   });
 
-  const secrets = await loadSecrets();
-  secrets[secret] = true;
-  await writeSecrets(secrets);
-
-  const imgSrc = await QRCode.toDataURL(QRData);
   const mainStyles = [
     'display: flex',
     'flex-direction: column',
@@ -123,7 +134,42 @@ app.get('/', async (req, res) => {
     <main style="${mainStyles.join('; ')}">
       <h1>Lock / Unlock Ubuntu With Phone</h1>
       <p>Scan this to pair the app:</p>
-      <img alt="scan this to pair the app" src="${imgSrc}" />
+      <div id="img">Just a minute, please...</div>
+      <script>
+        const message = (msg) => {
+          document.getElementById('img').innerHTML = msg;
+        }
+        fetch('http://localhost:${port}/img').then(
+          (resp) => {
+            if (resp.ok) {
+              resp.text().then(
+                (html) => {
+                  const tmp = document.createElement('div');
+                  tmp.innerHTML = html;
+                  document
+                    .getElementById('img')
+                    .replaceWith(tmp.firstChild);
+                },
+                (err) => {
+                  message('Could not obtain QR code.');
+                },
+              );
+            } else {
+              message('Something unexpected happened, sorry.');
+            }
+          },
+        ).catch((err) => {
+          message(\`
+            <p>
+              It appears you are not browsing this page from
+              the computer where the unlock server is running.
+            </p>
+            <p>
+              So you won't be able to get an unlock code.
+            </p>
+          \`);
+        });
+      </script>
     </main>
   `);
 });
