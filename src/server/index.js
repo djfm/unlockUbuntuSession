@@ -1,61 +1,119 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 
-const {
-  writeFile,
-  readFile,
-  stat,
-} = require('fs/promises');
+const os = require('os');
+const https = require('https');
+const childProcess = require('child_process');
 
 const path = require('path');
 
 const QRCode = require('qrcode');
 
 const express = require('express');
+const bodyParser = require('body-parser');
+
+const {
+  writeFile,
+  readFile,
+  stat,
+} = require('fs/promises');
+
+const port = process.env.PORT || 7583;
+
+const serverKeyPath = path.join(
+  __dirname, 'server-key.pem',
+);
+
+const serverCertPath = path.join(
+  __dirname, 'server-cert.perm',
+);
+
+const readFileToString = async (path) => {
+  const buffer = await readFile(path);
+  return buffer.toString();
+};
+
+const exec = (command) => new Promise((resolve, reject) => {
+  childProcess.exec(command, (error, stdout, stderr) => {
+    if (error) {
+      reject(error);
+      return;
+    }
+    resolve({ stdout, stderr });
+  });
+});
+
+const ips = [];
+for (const nets of Object.values(os.networkInterfaces())) {
+  for (const net of nets) {
+    if (net.family === 'IPv4' && !net.internal) {
+      ips.push(net.address);
+    }
+  }
+}
 
 const secretPath = path.join(
   __dirname,
   'secret.txt',
 );
 
-const initialize = async () => {
+const app = express();
+app.use(bodyParser.json());
+app.use((req, res, next) => {
+  if (req.hostname === 'localhost') {
+    return res.redirect(`${
+      req.protocol
+    }://${
+      ips[0]
+    }:${
+      port
+    }${
+      req.path
+    }`);
+  }
+
+  return next();
+});
+
+const main = async () => {
   try {
     await stat(secretPath);
     return;
   } catch (e) {
-    // that's OK, we need
-    // to initialize, then...
-  }
-
-  const makeRandom = (n) => {
-    if (n <= 0) {
-      return '';
+    if (e.code !== 'ENOENT') {
+      throw e;
     }
 
-    return `${Math.random() * 1000000}${makeRandom(n - 1)}`;
-  };
+    const makeRandom = (n) => {
+      if (n <= 0) {
+        return '';
+      }
 
-  const bigRandomThing = makeRandom(10);
+      return `${Math.random() * 1000000}${makeRandom(n - 1)}`;
+    };
 
-  await writeFile(secretPath, bigRandomThing);
+    const bigRandomThing = makeRandom(10);
+
+    await writeFile(secretPath, bigRandomThing);
+
+    const key = await readFileToString(serverKeyPath);
+    const cert = await readFileToString(serverCertPath);
+
+    https.createServer({
+      key,
+      cert,
+    }, app).listen(port, () => {
+      // eslint-disable-next-line no-console
+      console.log(`Locker / Unlocker listening on port ${port}`);
+    });
+  }
 };
 
-const app = express();
-
-const port = process.env.PORT || 7583;
-
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Locker / Unlocker listening on port ${port}`);
-});
-
-const init = initialize();
-
 app.get('/', async (req, res) => {
-  await init;
   const secret = await readFile(secretPath);
   const QRData = JSON.stringify({
     secret: secret.toString('utf-8'),
-    serverURL: `${req.protocol}://${req.hostname}`,
+    serverURL: `${req.protocol}://${req.hostname}:${port}`,
+    hostname: os.hostname(),
   });
 
   const imgSrc = await QRCode.toDataURL(QRData);
@@ -73,3 +131,41 @@ app.get('/', async (req, res) => {
     </main>
   `);
 });
+
+app.post('/unlock', async (req, res) => {
+  const secret = await readFile(secretPath);
+  if (secret === req.body.secret) {
+    try {
+      const out = await exec([
+        'dbus-send --session --dest=org.gnome.ScreenSaver',
+        '--type=method_call --print-reply --reply-timeout=20000',
+        '/org/gnome/ScreenSaver org.gnome.ScreenSaver.SetActive boolean:false',
+      ].join(' '));
+      res.send(out);
+    } catch (e) {
+      res.status(500).send(e.message);
+    }
+  } else {
+    res.status(403).send('bad secret');
+  }
+});
+
+app.post('/lock', async (req, res) => {
+  const secret = await readFile(secretPath);
+  if (secret === req.body.secret) {
+    try {
+      const out = await exec([
+        'dbus-send --session --dest=org.gnome.ScreenSaver',
+        '--type=method_call --print-reply --reply-timeout=20000',
+        '/org/gnome/ScreenSaver org.gnome.ScreenSaver.Lock',
+      ].join(' '));
+      res.send(out);
+    } catch (e) {
+      res.status(500).send(e.message);
+    }
+  } else {
+    res.status(403).send('bad secret');
+  }
+});
+
+main();
