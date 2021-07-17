@@ -165,12 +165,7 @@ export const ViewWithUnlockKey: React.FC<ViewWithUnlockKeyProps> = ({
             Un-pair
           </Button>
         </View>
-        <View
-          style={{
-            padding: baseSpacing,
-            backgroundColor: Colors.lighter,
-          }}
-        >
+        <View>
           <View
             style={{
               marginBottom: 2 * baseSpacing,
