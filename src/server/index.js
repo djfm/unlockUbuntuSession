@@ -35,10 +35,31 @@ const app = express();
 app.use(bodyParser.json());
 
 app.get('/', async (req, res) => {
+  // Normally you have to have this
+  // server running in HTTPS,
+  // the easiest way to do so is to
+  // proxy-pass with apache and
+  // use let's encrypt's certbot provide
+  // and maintain a certificate...
+  // this assumes you can have a domain
+  // name pointing to your machine.
+
+  // I'm assuming that if we're forwarding, that's
+  // to get https without node being aware of it
+  const protocol = req.headers['x-forwarded-host']
+    ? 'https' : 'http';
+
+  // so if we're forwarding, the hostname
+  // comes from the request headers, not
+  // from the hostname
+  const hostname = protocol === 'https'
+    ? req.headers['x-forwarded-host']
+    : req.hostname;
+
   const secret = await readFile(secretPath);
   const QRData = JSON.stringify({
     secret: secret.toString('utf-8'),
-    serverURL: `https://${req.headers['x-forwarded-host']}`,
+    serverURL: `${protocol}://${hostname}`,
     hostname: os.hostname(),
   });
 
