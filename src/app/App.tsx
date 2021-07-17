@@ -37,12 +37,18 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    let applyEffect = true;
+
     (async () => {
       const key = await getUnlockKey();
-      if (key !== undefined) {
+      if (key && applyEffect) {
         setUnlockKey(key);
       }
     })();
+
+    return () => {
+      applyEffect = false;
+    };
   });
 
   const body = unlockKey === undefined
