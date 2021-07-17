@@ -52,7 +52,7 @@ export const ViewWithUnlockKey: React.FC<ViewWithUnlockKeyProps> = ({
     return () => {
       applyEffect = false;
     };
-  });
+  }, [isLocked]);
 
   const handleUnPairPressed = async () => {
     setIsWaiting(true);
