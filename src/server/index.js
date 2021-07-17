@@ -15,7 +15,6 @@ const bodyParser = require('body-parser');
 const {
   writeFile,
   readFile,
-  stat,
 } = require('fs/promises');
 
 const port = 7583;
