@@ -8,70 +8,35 @@ const {
 
 const path = require('path');
 
-const {
-  generateKeyPair,
-  privateEncrypt,
-} = require('crypto');
-
 const QRCode = require('qrcode');
 
 const express = require('express');
 
-const keyOptions = {
-  modulusLength: 4096,
-  publicKeyEncoding: {
-    type: 'spki',
-    format: 'pem',
-  },
-  privateKeyEncoding: {
-    type: 'pkcs8',
-    format: 'pem',
-  },
-};
-
-const privKeyPath = path.join(
+const secretPath = path.join(
   __dirname,
-  'privKey.pem',
-);
-
-const pubKeyPath = path.join(
-  __dirname,
-  'pubKey.pem',
+  'secret.txt',
 );
 
 const initialize = async () => {
   try {
-    await stat('privKey.pem');
-    await stat('pubKey.pem');
+    await stat(secretPath);
     return;
   } catch (e) {
     // that's OK, we need
     // to initialize, then...
   }
 
-  const keyPair = await new Promise(
-    (resolve, reject) => {
-      generateKeyPair(
-        'rsa',
-        keyOptions,
-        (err, pubKey, privKey) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          resolve({
-            pubKey,
-            privKey,
-          });
-        },
-      );
-    },
-  );
+  const makeRandom = (n) => {
+    if (n <= 0) {
+      return '';
+    }
 
-  await Promise.all([
-    writeFile(privKeyPath, keyPair.privKey),
-    writeFile(pubKeyPath, keyPair.pubKey),
-  ]);
+    return `${Math.random() * 1000000}${makeRandom(n - 1)}`;
+  };
+
+  const bigRandomThing = makeRandom(10);
+
+  await writeFile(secretPath, bigRandomThing);
 };
 
 const app = express();
@@ -79,6 +44,7 @@ const app = express();
 const port = process.env.PORT || 7583;
 
 app.listen(port, () => {
+  // eslint-disable-next-line no-console
   console.log(`Locker / Unlocker listening on port ${port}`);
 });
 
@@ -86,9 +52,13 @@ const init = initialize();
 
 app.get('/', async (req, res) => {
   await init;
-  const privKey = await readFile(privKeyPath);
-  const secret = privateEncrypt(privKey, 'to be changed').toString('base64');
-  const imgSrc = await QRCode.toDataURL(secret);
+  const secret = await readFile(secretPath);
+  const QRData = JSON.stringify({
+    secret: secret.toString('utf-8'),
+    serverURL: `${req.protocol}://${req.hostname}`,
+  });
+
+  const imgSrc = await QRCode.toDataURL(QRData);
   const mainStyles = [
     'display: flex',
     'flex-direction: column',

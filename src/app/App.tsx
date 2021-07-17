@@ -3,6 +3,8 @@ import React, {
   useState,
 } from 'react';
 
+import { Buffer } from 'buffer';
+
 import {
   Button,
   View,
@@ -15,11 +17,12 @@ import {
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { BarCodeReadEvent } from 'react-native-camera';
 import QRCodeScanner from 'react-native-qrcode-scanner';
 
 type UnlockKey = {
   serverURL: string
-  secretKey: string
+  secret: string
 }
 
 const defaultPadding = 10;
@@ -51,15 +54,33 @@ const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: Colors.white,
       }}
     >
-      <Text>Universal React with Expo lol</Text>
-      <Button
-        title="Unlock Screen"
-        onPress={handleUnlockPressed}
+      <Text
+        style={{
+          fontSize: defaultFontSize,
+          padding: 2 * defaultPadding,
+          textAlign: 'center',
+        }}
       >
-        Unlock Screen
-      </Button>
+        Unlock Ubuntu Sessions seems to be Properly Configured.
+      </Text>
+
+      <View
+        style={{
+          marginTop: 2 * defaultPadding,
+          marginBottom: 2 * defaultPadding,
+        }}
+      >
+        <Button
+          title="Unlock Screen"
+          onPress={handleUnlockPressed}
+        >
+          Unlock Screen
+        </Button>
+      </View>
+
       <Button
         title="Lock Screen"
         onPress={handleLockPressed}
@@ -72,11 +93,17 @@ const UIWithUnlockKey = ({ unlockKey }: UIWithUnlockKeyProps) => {
   return markup;
 };
 
-const UIWithoutUnlockKey = () => {
+type UIWithoutUnlockKeyProps = {
+  setQRCode: (code: string) => unknown
+}
+const UIWithoutUnlockKey = (
+  props: UIWithoutUnlockKeyProps,
+) => {
   const [isScanning, setIsScanning] = useState(false);
 
-  const handleQRCodeRead = (code) => {
-    console.log({ code });
+  const handleQRCodeRead = (code: BarCodeReadEvent) => {
+    props.setQRCode(code.data);
+    setIsScanning(false);
   };
 
   const handleStartScanning = () => {
@@ -174,6 +201,11 @@ const UIWithoutUnlockKey = () => {
 const App: React.FC = () => {
   const [unlockKey, setUnlockKey] = useState<UnlockKey>();
 
+  const setQRCode = async (code: string) => {
+    const key = JSON.parse(code);
+    setUnlockKey(key);
+  };
+
   useEffect(() => {
     (async () => {
       const key = await getUnlockKey();
@@ -184,7 +216,7 @@ const App: React.FC = () => {
   });
 
   const markup = unlockKey === undefined
-    ? <UIWithoutUnlockKey />
+    ? <UIWithoutUnlockKey setQRCode={setQRCode} />
     : <UIWithUnlockKey unlockKey={unlockKey} />;
 
   return markup;
