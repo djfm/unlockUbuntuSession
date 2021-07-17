@@ -129,7 +129,7 @@ export const ViewWithUnlockKey: React.FC<ViewWithUnlockKeyProps> = ({
             textAlign: 'center',
           }}
         >
-          Unlock Ubuntu Sessions seems to be Properly Configured.
+          The app seems to be Properly Configured!
         </Text>
 
         <View
@@ -138,12 +138,15 @@ export const ViewWithUnlockKey: React.FC<ViewWithUnlockKeyProps> = ({
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-evenly',
+            backgroundColor: Colors.dark,
+            alignSelf: 'stretch',
           }}
         >
           <Text
             style={{
               fontSize: baseFontSize,
               padding: baseSpacing,
+              color: Colors.light,
             }}
           >
             paired with
@@ -162,10 +165,14 @@ export const ViewWithUnlockKey: React.FC<ViewWithUnlockKeyProps> = ({
             Un-pair
           </Button>
         </View>
-        <View>
+        <View
+          style={{
+            padding: baseSpacing,
+            backgroundColor: Colors.lighter,
+          }}
+        >
           <View
             style={{
-              marginTop: 2 * baseSpacing,
               marginBottom: 2 * baseSpacing,
             }}
           >

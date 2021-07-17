@@ -3,12 +3,20 @@ import React, {
   useState,
 } from 'react';
 
+import {
+  View,
+  Text,
+} from 'react-native';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import ViewWithUnlockKey from './ViewWithUnlockKey';
 import ViewWithoutUnlockKey from './ViewWithoutUnlockKey';
 
 import {
+  baseFontSize,
+  baseSpacing,
+  Colors,
   UnlockKey,
 } from './common';
 
@@ -37,7 +45,7 @@ const App: React.FC = () => {
     })();
   });
 
-  const markup = unlockKey === undefined
+  const body = unlockKey === undefined
     ? <ViewWithoutUnlockKey setQRCode={setQRCode} />
     : (
       <ViewWithUnlockKey
@@ -46,7 +54,28 @@ const App: React.FC = () => {
       />
     );
 
-  return markup;
+  return (
+    <View
+      style={{
+        flex: 1,
+      }}
+    >
+      <View>
+        <Text
+          style={{
+            fontSize: 1.5 * baseFontSize,
+            color: Colors.white,
+            textAlign: 'center',
+            marginTop: baseSpacing,
+            marginBottom: 2 * baseSpacing,
+          }}
+        >
+          Unlock Ubuntu Session
+        </Text>
+      </View>
+      {body}
+    </View>
+  );
 };
 
 export default App;
