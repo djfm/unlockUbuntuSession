@@ -19,7 +19,7 @@ const {
 } = require('fs/promises');
 
 const port = 7583;
-const secretPath = path.join(__dirname, 'secret.txt');
+const secretsPath = path.join(__dirname, 'secrets.json');
 
 const exec = (command) => new Promise((resolve, reject) => {
   childProcess.exec(command, (error, stdout, stderr) => {
@@ -30,6 +30,45 @@ const exec = (command) => new Promise((resolve, reject) => {
     resolve({ stdout, stderr });
   });
 });
+
+const loadSecrets = async () => {
+  try {
+    const buffer = await readFile(secretsPath);
+    const str = buffer.toString();
+    const data = JSON.parse(str);
+    return data;
+  } catch (e) {
+    if (e.code !== 'ENOENT') {
+      throw e;
+    }
+    return {};
+  }
+};
+
+const writeSecrets = async (secrets) =>
+  writeFile(secretsPath, JSON.stringify(secrets));
+
+const makeRandomString = () => {
+  const makeRandom = (n) => {
+    if (n <= 0) {
+      return '';
+    }
+
+    return `${Math.random() * 1000000}${makeRandom(n - 1)}`;
+  };
+
+  return makeRandom(10).replace(/\./g, 'Z');
+};
+
+// maybe later I'll implement some sort of
+// expiration mechanism
+const isValidSecret = (secret) => {
+  if (!secret) {
+    return false;
+  }
+
+  return true;
+};
 
 const app = express();
 app.use(bodyParser.json());
@@ -56,12 +95,17 @@ app.get('/', async (req, res) => {
     ? req.headers['x-forwarded-host']
     : req.hostname;
 
-  const secret = await readFile(secretPath);
+  const secret = makeRandomString();
+
   const QRData = JSON.stringify({
-    secret: secret.toString('utf-8'),
+    secret,
     serverURL: `${protocol}://${hostname}`,
     hostname: os.hostname(),
   });
+
+  const secrets = await loadSecrets();
+  secrets[secret] = true;
+  await writeSecrets(secrets);
 
   const imgSrc = await QRCode.toDataURL(QRData);
   const mainStyles = [
@@ -80,8 +124,8 @@ app.get('/', async (req, res) => {
 });
 
 app.post('/unlock', async (req, res) => {
-  const secret = await readFile(secretPath);
-  if (secret.toString() === req.body.secret) {
+  const secrets = await loadSecrets();
+  if (isValidSecret(secrets[req.body.secret])) {
     try {
       const out = await exec([
         'dbus-send --session --dest=org.gnome.ScreenSaver',
@@ -98,8 +142,8 @@ app.post('/unlock', async (req, res) => {
 });
 
 app.post('/lock', async (req, res) => {
-  const secret = await readFile(secretPath);
-  if (secret.toString() === req.body.secret) {
+  const secrets = await loadSecrets();
+  if (isValidSecret(secrets[req.body.secret])) {
     try {
       const out = await exec([
         'dbus-send --session --dest=org.gnome.ScreenSaver',
@@ -115,31 +159,7 @@ app.post('/lock', async (req, res) => {
   }
 });
 
-const main = async () => {
-  try {
-    await stat(secretPath);
-  } catch (e) {
-    if (e.code !== 'ENOENT') {
-      throw e;
-    }
-
-    const makeRandom = (n) => {
-      if (n <= 0) {
-        return '';
-      }
-
-      return `${Math.random() * 1000000}${makeRandom(n - 1)}`;
-    };
-
-    const bigRandomThing = makeRandom(10);
-
-    await writeFile(secretPath, bigRandomThing);
-  }
-
-  app.listen(port, () => {
-    // eslint-disable-next-line no-console
-    console.log(`Locker / Unlocker listening on port ${port}`);
-  });
-};
-
-main();
+app.listen(port, () => {
+  // eslint-disable-next-line no-console
+  console.log(`Locker / Unlocker listening on port ${port}`);
+});
