@@ -77,6 +77,14 @@ const validateSecret = async (secret) => {
 const app = express();
 app.use(bodyParser.json());
 
+/*
+// useful for debugging
+app.use((req, res, next) => {
+  console.log(req.url);
+  next();
+});
+*/
+
 app.get('/', async (req, res) => {
   // Normally you have to have this
   // server running in HTTPS,
