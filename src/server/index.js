@@ -70,6 +70,11 @@ const isValidSecret = (secret) => {
   return true;
 };
 
+const validateSecret = async (secret) => {
+  const secrets = await loadSecrets();
+  return isValidSecret([secrets[secret]]);
+};
+
 const app = express();
 app.use(bodyParser.json());
 
@@ -124,8 +129,8 @@ app.get('/', async (req, res) => {
 });
 
 app.post('/unlock', async (req, res) => {
-  const secrets = await loadSecrets();
-  if (isValidSecret(secrets[req.body.secret])) {
+  const allowed = await validateSecret(req.body.secret);
+  if (allowed) {
     try {
       const out = await exec([
         'dbus-send --session --dest=org.gnome.ScreenSaver',
@@ -142,8 +147,8 @@ app.post('/unlock', async (req, res) => {
 });
 
 app.post('/lock', async (req, res) => {
-  const secrets = await loadSecrets();
-  if (isValidSecret(secrets[req.body.secret])) {
+  const allowed = await validateSecret(req.body.secret);
+  if (allowed) {
     try {
       const out = await exec([
         'dbus-send --session --dest=org.gnome.ScreenSaver',
