@@ -20,10 +20,10 @@ const {
 const port = 7583;
 const secretsPath = path.join(__dirname, 'secrets.json');
 
-const exec = (command) => new Promise((resolve, reject) => {
+const exec = (command) => new Promise((resolve) => {
   childProcess.exec(command, (error, stdout, stderr) => {
     if (error) {
-      reject(error);
+      resolve({ stdout: '', stderr: error.message });
       return;
     }
     resolve({ stdout, stderr });
